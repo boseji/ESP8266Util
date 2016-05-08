@@ -1,0 +1,36 @@
+###########################################
+# Syntax Coloring Map For ESP8266Util
+###########################################
+
+###########################################
+# Datatypes (KEYWORD1)
+###########################################
+
+ESP8266Util	KEYWORD1	ESP8266Util
+
+###########################################
+# Methods and Functions (KEYWORD2)
+###########################################
+
+ESP8266Util_Store_t		KEYWORD2
+ESP8266Util_Conn	KEYWORD2
+ESP8266Util_FreeChannel	KEYWORD2
+ESP8266Util_DynaConnect	KEYWORD2
+ESP8266Util_DynaStore	KEYWORD2
+ESP8266Util_DynaCheck	KEYWORD2
+ESP8266Util_DynaDelete	KEYWORD2
+
+###########################################
+# Constants (LITERAL1)
+###########################################
+
+DYNACONNECT_OK	LITERAL1
+DYNACONNECT_SUCCESS	LITERAL1
+DYNACONNECT_ERROR_PARAM	LITERAL1
+DYNACONNECT_ERROR_FILE	LITERAL1
+DYNACONNECT_ERROR_SSID	LITERAL1
+DYNACONNECT_ERROR_PASS	LITERAL1
+DYNACONNECT_ERROR_CHECK	LITERAL1
+ESP8266UTIL_STORE_EEPROM	LITERAL1
+ESP8266UTIL_STORE_FS	LITERAL1
+
