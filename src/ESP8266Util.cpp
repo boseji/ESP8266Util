@@ -10,9 +10,9 @@
 // Extendable: Yes
 //
 // @file ESP8266Util.cpp
-// A simple Library to perform common functions on ESP8266
 // 
 // @brief 
+// A simple Library to perform common functions on ESP8266
 //
 // @version API 1.0.0
 //
@@ -29,6 +29,7 @@
 #include "ESP8266Util.h"
 #include "FS.h"
 #include <EEPROM.h>
+#include <ESP8266HTTPClient.h>
 
 
 /* Sets Up debug Prints */
@@ -45,8 +46,8 @@ extern "C" {
 
 ///////////////////////////////////////////////////////////////////////
 
-bool ESP8266Util_Conn(const char *ssid, const char *pass, bool persistent,
-    uint32_t retry)
+bool Connect(const char *ssid, const char *pass, 
+    uint32_t retry, bool persistent)
 {
     // Perform Initial Configuration
     WiFi.disconnect(false);
@@ -111,7 +112,8 @@ bool ESP8266Util_Conn(const char *ssid, const char *pass, bool persistent,
 
 ///////////////////////////////////////////////////////////////////////
 
-bool ESP8266Util_AP(const char *ssid, const char *pass, IPAddress apip)
+bool AccessPoint(const char *ssid, const char *pass, int32_t chan, 
+    IPAddress apip)
 {
   // Check the Input Parameters
   if(ssid == NULL || pass == NULL)
@@ -143,7 +145,7 @@ bool ESP8266Util_AP(const char *ssid, const char *pass, IPAddress apip)
   delay(100);
   WiFi.mode(WIFI_AP);
   WiFi.softAPConfig(apip, apip, IPAddress(255, 255, 255, 0));
-  WiFi.softAP(ssid, pass);
+  WiFi.softAP(ssid, pass, chan);
   delay(100);
   
   // No problem to continue now
@@ -152,13 +154,22 @@ bool ESP8266Util_AP(const char *ssid, const char *pass, IPAddress apip)
 
 ///////////////////////////////////////////////////////////////////////
 
-int32_t ESP8266Util_FreeChannel(uint32_t cycle)
+int32_t FreeChannel(uint32_t cycle, WiFiPhyMode_t mode)
 {
     int32_t retchan = 1;
     int32_t chan[15];
-    // As per Wireless Lan 802.11g standard Non-Overlapped DSSS bands
-    const uint8_t valid_chan[4] = {
-        1, 5, 9, 13
+    
+    const uint8_t valid_chan[4][4] = {
+      {0,4,4,2,}, // Size Specifications for each Band of Wireless Lan
+      {// As per Wireless Lan 802.11b standard Non-Overlapped DSSS bands
+        1, 6, 11, 14 //WIFI_PHY_MODE_11B = 1
+      },
+      {// As per Wireless Lan 802.11g standard Non-Overlapped DSSS bands
+        1, 5, 9, 13 //WIFI_PHY_MODE_11G = 2
+      },
+      {// As per Wireless Lan 802.11n standard
+        3, 11, 0, 0 //WIFI_PHY_MODE_11N = 3
+      },
     };
     uint32_t i;
     uint32_t nets;
@@ -174,9 +185,9 @@ int32_t ESP8266Util_FreeChannel(uint32_t cycle)
     WiFi.disconnect();
     delay(100);
     if(Serial && !NoDebug)
-        Serial.println(" Begining Scanning....");
+        Serial.println(" Beginning Scanning....");
     // Run the Cycles
-    while(--cycle)
+    do
     {
         nets = WiFi.scanNetworks(false, true);
         if(Serial && !NoDebug)
@@ -195,6 +206,7 @@ int32_t ESP8266Util_FreeChannel(uint32_t cycle)
                 retchan = WiFi.channel(i);
                 if(Serial && !NoDebug)
                 {
+                    Serial.print(" ");
                     Serial.print(i + 1);
                     Serial.print(": ");
                     Serial.print(WiFi.SSID(i));
@@ -213,42 +225,151 @@ int32_t ESP8266Util_FreeChannel(uint32_t cycle)
             }
         }
         WiFi.scanDelete();
-    }// End of Scan cycles
+    }while(--cycle);// End of Scan cycles
     if(Serial && !NoDebug)
     {    
         Serial.println(" .... Scan Complete");
         Serial.println();
         Serial.println(" Channel Capacity List: ");
     }
-    // There is Channel 0 in WiFi
-    nets = chan[valid_chan[0]];
-    retchan = valid_chan[0];
+    // There is No Channel 0 in WiFi
+    nets = chan[valid_chan[mode][0]];
+    retchan = valid_chan[mode][0];
     // Scan through the Channels and check the Least populated Channel
-    for(i=1;i<4;i++)
+    for(i=0;i<valid_chan[0][mode];i++)
     {
         if(Serial && !NoDebug)
         {
-            Serial.print("Channel ");
-            Serial.print(valid_chan[i]);
+            Serial.print(" Channel ");
+            Serial.print(valid_chan[mode][i]);
             Serial.print(" x ");              
-            Serial.println(chan[valid_chan[i]]);
+            Serial.println(chan[valid_chan[mode][i]]);
         }
         // Lowest Sort
-        if(chan[valid_chan[i]] < nets)
+        if(chan[valid_chan[mode][i]] < nets)
         {
-            nets = chan[valid_chan[i]];
-            retchan = valid_chan[i];
+            nets = chan[valid_chan[mode][i]];
+            retchan = valid_chan[mode][i];
         }
     }
     
     if(Serial && !NoDebug)
     {
         Serial.println();
-        Serial.print("Selected Channel = ");
+        Serial.print(" Selected Channel = ");
         Serial.println(retchan);
+        Serial.println();
     }
     // Finally return the Selection of Channel
     return retchan;
+}
+///////////////////////////////////////////////////////////////////////
+
+bool IsConnected(void)
+{
+  return (WiFi.status() == WL_CONNECTED);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+bool IsAccessPoint(void)
+{
+  return ((WiFi.getMode() & WIFI_AP) == WIFI_AP);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+bool IsStation(void)
+{
+  return ((WiFi.getMode() & WIFI_STA) == WIFI_STA);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+bool RestRequest(String uri, String data, 
+    char *buffer, uint32_t max_sz, int32_t *httpCode)
+{
+  HTTPClient http; // Pick The client
+  int32_t code = -1; // HTTP Code
+  bool ret = false; // Return Variable
+  
+  do{
+    // Parameter Validation
+    if(uri == NULL || (buffer!=NULL && max_sz==0)) break;
+    
+    // Check Request Type for URI Alignment
+    if(data.length() != 0) // POST Request
+    {
+      // Check for Correct Terminator
+      if(uri.lastIndexOf('/') != uri.charAt(uri.length()-1))
+      {
+        uri += '/';
+      }
+    }
+         
+    // Start the Requester
+    if(!http.begin(uri))
+    {
+      if(Serial && !NoDebug)
+      {    
+          Serial.println(" Error ! Problem with URI ");
+          Serial.println(uri);
+      }
+      break;
+    }
+    
+    // Check Request Type
+    if(data.length() != 0) // POST Request
+    {
+      // Post Request
+      code = http.POST(data);
+      if(Serial && !NoDebug)
+        Serial.print(" HTTP POST Code: ");
+    }
+    else if(uri.indexOf('?') == uri.lastIndexOf('?')) // GET Request
+    {
+      // Get Request
+      code = http.GET();
+      if(Serial && !NoDebug)
+        Serial.print(" HTTP GET Code: ");
+    }
+    else // Un-Recognized Request
+    {
+      break;
+    }
+    if(Serial && !NoDebug)
+    {    
+      Serial.println(code);
+    }
+    
+    // Check for Success types
+    if(code == HTTP_CODE_OK)
+      ret = true;
+      
+  }while(0);
+  
+  // Perform the Copy
+  if(httpCode != NULL && code>0)
+  {
+    *httpCode = code;
+  }
+  code = http.getString().length();
+  if(buffer != NULL && code != 0)
+  {
+    if(max_sz > code)
+      strncpy(buffer,http.getString().c_str(), code);
+    else
+      strncpy(buffer,http.getString().c_str(), max_sz);
+    if(Serial && !NoDebug)
+    {    
+        Serial.println(" HTTP Response: ");
+        Serial.println(http.getString());
+    }
+  }
+  
+  // In all cases Close HTTP Client Before leaving
+  http.end();
+  return ret; // All other Cases ignore
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -283,7 +404,7 @@ const char HTTP_FOOT1[] = {
 };
 const char *HTTP_FOOT2 = "<h2> WiFi Configuration Stored !</h2></body></html>";
 // Accesspoint Configuration
-const char *gpAP_ssid = "ESP8266Weg";
+const char *gpAP_ssid = "Weg";
 // File Path
 const char *dynFile = "/dynaconf.txt";
 
@@ -310,7 +431,7 @@ void h_NotFound(void);
 
 ///////////////////////////////////
 /// Internal Initialize Function
-void ESP8266Weg::_Init(void)
+void Weg::_Init(void)
 {
   uint32_t i;
   // Setup all the Variables
@@ -326,7 +447,7 @@ void ESP8266Weg::_Init(void)
   this->_bST_infoValid = false;
   this->_bAutoWifiNeeded = true;
   this->_bStoreInfo = true;
-  this->_xprefStore = ESP8266UTIL_STORE_FS;
+  this->_xprefStore = STORE_FS;
   this->_xAP_ip = IPAddress(192, 168, 1, 1);
   this->_bIsRunning = false; // Intially we are not Running
   this->nRetry = 50;
@@ -334,12 +455,12 @@ void ESP8266Weg::_Init(void)
   
 }
 /// Constructor for the Class
-ESP8266Weg::ESP8266Weg(void)
+Weg::Weg(void)
 {
   this->_Init();
 }
 /// Start the System
-bool ESP8266Weg::begin(void)
+bool Weg::begin(void)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return false;
@@ -357,10 +478,10 @@ bool ESP8266Weg::begin(void)
     strcat(this->_szHostName, WiFi.softAPmacAddress().c_str());
   }
   
-  // In case a valid Station info is not loaded then Check for One
-  if(!this->_bST_infoValid)
-    return this->check();
-  
+  // In case a valid Station info is not loaded then load for One - Calling Connect
+  /*if(!this->_bST_infoValid)
+    return this->load();
+  */
   // Setup the Hostname
   WiFi.hostname(String(this->_szHostName));
   /*
@@ -374,10 +495,10 @@ bool ESP8266Weg::begin(void)
   }*/
   
   // We are All good
-  return true;
+  return this->startConnection();
 }
 /// Enable / Disable Automatic WiFi AP enablement
-void ESP8266Weg::autoAP(bool DynamicWiFiAP)
+void Weg::autoAP(bool DynamicWiFiAP)
 {
   if(!this->_bIsRunning) // Set only if we are not Running
   {
@@ -385,7 +506,7 @@ void ESP8266Weg::autoAP(bool DynamicWiFiAP)
   }
 }
 /// Manually Configure a Custom AP Name and Password
-bool ESP8266Weg::apInfo(const char *ssid, const char *pass)
+bool Weg::apInfo(const char *ssid, const char *pass)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return false;
@@ -407,7 +528,7 @@ bool ESP8266Weg::apInfo(const char *ssid, const char *pass)
   return true;
 }
 /// Setup a Specific IP address to be Assigned to the Network
-void ESP8266Weg::apIp(IPAddress apip)
+void Weg::apIp(IPAddress apip)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return;
@@ -415,7 +536,7 @@ void ESP8266Weg::apIp(IPAddress apip)
   this->_xAP_ip = apip;
 }
 /// Manually Configure a Custom Station Name and Password
-bool ESP8266Weg::stationInfo(const char *ssid, const char *pass)
+bool Weg::stationInfo(const char *ssid, const char *pass)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return false;
@@ -437,7 +558,7 @@ bool ESP8266Weg::stationInfo(const char *ssid, const char *pass)
   return true;
 }
 /// Change to Storage where the Connection info is stored and if its needed
-void ESP8266Weg::setStore(bool bStoreInfo, ESP8266Util_Store_t xpStore)
+void Weg::setStore(bool bStoreInfo, Store_t xpStore)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return;
@@ -446,7 +567,7 @@ void ESP8266Weg::setStore(bool bStoreInfo, ESP8266Util_Store_t xpStore)
   this->_xprefStore = xpStore;
 }
 /// Perform storage function in case Valid Station Info is available
-bool ESP8266Weg::store(void)
+bool Weg::store(void)
 {
   uint16_t cksum = 0; // Checksum
   int32_t i=0;      // Counter
@@ -462,7 +583,7 @@ bool ESP8266Weg::store(void)
   
   switch(this->_xprefStore)
   {
-    case ESP8266UTIL_STORE_FS:
+    case STORE_FS:
       {
         File f;     // For File Control
         
@@ -569,7 +690,7 @@ bool ESP8266Weg::store(void)
       }
       break;
     
-    case ESP8266UTIL_STORE_EEPROM:
+    case STORE_EEPROM:
       {
         uint16_t addr;
         // Start the EEPROM
@@ -629,7 +750,7 @@ bool ESP8266Weg::store(void)
   return true;
 }
 /// Clear the Info in Storage & Memory
-bool ESP8266Weg::remove(bool bmemory)
+bool Weg::remove(bool bmemory)
 {
   bool ret = false;
   // Can't Accept when loop is running
@@ -637,7 +758,7 @@ bool ESP8266Weg::remove(bool bmemory)
   
   switch(this->_xprefStore)
   {
-    case ESP8266UTIL_STORE_FS:
+    case STORE_FS:
       {
         File f;     // For File Control
     
@@ -667,7 +788,7 @@ bool ESP8266Weg::remove(bool bmemory)
       }
       break;
      
-    case ESP8266UTIL_STORE_EEPROM:
+    case STORE_EEPROM:
       {
         uint16_t addr;
         // Start the EEPROM
@@ -699,7 +820,7 @@ bool ESP8266Weg::remove(bool bmemory)
 }
 
 /// Check if there is some Info available in Storage or Already valid info in Memory
-bool ESP8266Weg::check(void)
+bool Weg::load(void)
 {
   uint16_t cksum=0, ck=0; // Checksum
   int32_t i=0;    // Counter
@@ -714,7 +835,7 @@ bool ESP8266Weg::check(void)
   
   switch(this->_xprefStore)
   {
-    case ESP8266UTIL_STORE_FS:
+    case STORE_FS:
       {
         File f;     // For File Control
     
@@ -887,7 +1008,7 @@ bool ESP8266Weg::check(void)
       }
       break;
      
-    case ESP8266UTIL_STORE_EEPROM:
+    case STORE_EEPROM:
       {
         uint16_t addr;
         // Start the EEPROM
@@ -1064,7 +1185,7 @@ bool ESP8266Weg::check(void)
   return true;
 }
 /// Internal Used to Try out another Connection attempt
-bool ESP8266Weg::_TryAP(void)
+bool Weg::_TryAP(void)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return false;
@@ -1089,7 +1210,7 @@ bool ESP8266Weg::_TryAP(void)
     Serial.println(this->_szAP_PASSWORD);
   }
   
-  if(!ESP8266Util_AP(this->_szAP_SSID, this->_szAP_PASSWORD))
+  if(!AccessPoint(this->_szAP_SSID, this->_szAP_PASSWORD))
   { // if Connection Fails
     if(Serial && !NoDebug)
       Serial.println(" Error Could not start AP !");
@@ -1133,8 +1254,8 @@ bool ESP8266Weg::_TryAP(void)
   // We have Started Up
   return true;
 }
-/// To Begin connection in case everthing is Available Alright
-bool ESP8266Weg::connect(void)
+/// To Begin connection in case everything is Available Alright
+bool Weg::startConnection(void)
 {
   // Can't Accept when loop is running
   if(this->_bIsRunning) return false;
@@ -1151,13 +1272,13 @@ bool ESP8266Weg::connect(void)
   }
   
   if(!this->_bST_infoValid) // STation is not configured yet - Lets Try
-    this->check();
+    this->load();
     
   // If Station InFo is Validate
   if(this->_bST_infoValid)
   {
     // Attempt the Connection
-    ESP8266Util_Conn(this->_szST_SSID, this->_szST_PASSWORD, false, this->nRetry);
+    Connect(this->_szST_SSID, this->_szST_PASSWORD, this->nRetry);
     
     // If Connection is Success
     if(WiFi.status() == WL_CONNECTED)
@@ -1175,7 +1296,7 @@ bool ESP8266Weg::connect(void)
 }
 
 /// To Run the Internal State Machine for connectivity
-bool ESP8266Weg::run(void)
+bool Weg::status(void)
 {
   static uint32_t reconnect = 0;
   /*
@@ -1214,15 +1335,18 @@ bool ESP8266Weg::run(void)
         // Attempt Reconnection
         if(--reconnect)
         {
-          ESP8266Util_Conn(this->_szST_SSID, this->_szST_PASSWORD, false, this->nRetry);
+          Connect(this->_szST_SSID, this->_szST_PASSWORD, this->nRetry);
           return false; // We are Still trying
         }
         // Invalidate the Station Records
-        this->_bST_infoValid = false;
-        if(Serial && !NoDebug)
-          Serial.println(" Info: Retrying Dynamic Connection");
+        //this->_bST_infoValid = false;
+        //if(Serial && !NoDebug)
+        //  Serial.println(" Info: Retrying Dynamic Connection");
         // Attempt the Restart the Dynamic Connection
-        this->_TryAP();
+        //this->_TryAP();
+        
+        //.... Instead just Reset
+        ESP.reset();
         return false; // We are Still trying
       }
       
@@ -1232,7 +1356,7 @@ bool ESP8266Weg::run(void)
       if(Serial && !NoDebug)
           Serial.println(" Error Launching Full connect as Station Info is not Valid!");
       // Attempt to Perform a Full scale Connect
-      return this->connect();
+      return this->startConnection();
     }
     //if(Serial && !NoDebug)
     //  Serial.println(" Error Can't do any thing WiFi not connected!");
@@ -1273,7 +1397,7 @@ bool ESP8266Weg::run(void)
       
       // Perform a WiFi connection this time again with Connect
       // Attempt the Connection
-      return ESP8266Util_Conn(this->_szST_SSID, this->_szST_PASSWORD, false, this->nRetry);
+      return Connect(this->_szST_SSID, this->_szST_PASSWORD, this->nRetry);      
     }
   }// End of Running Check
   return false; // Normally False

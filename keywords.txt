@@ -7,30 +7,37 @@
 ###########################################
 
 ESP8266Util	KEYWORD1	ESP8266Util
+Weg	KEYWORD1	Weg
 
 ###########################################
 # Methods and Functions (KEYWORD2)
 ###########################################
 
-ESP8266Util_Store_t		KEYWORD2
-ESP8266Util_Conn	KEYWORD2
-ESP8266Util_FreeChannel	KEYWORD2
-ESP8266Util_DynaConnect	KEYWORD2
-ESP8266Util_DynaStore	KEYWORD2
-ESP8266Util_DynaCheck	KEYWORD2
-ESP8266Util_DynaDelete	KEYWORD2
+Store_t		    KEYWORD2
+Connect	      KEYWORD2
+FreeChannel	  KEYWORD2
+AccessPoint	  KEYWORD2
+IsConnected	  KEYWORD2
+IsAccessPoint KEYWORD2
+IsStation 	  KEYWORD2
+nRetry	      KEYWORD2
+nReconnect	  KEYWORD2
+autoAP	      KEYWORD2
+apInfo	      KEYWORD2
+apIp	        KEYWORD2
+stationInfo	  KEYWORD2
+setStore	    KEYWORD2
+store	        KEYWORD2
+remove	      KEYWORD2
+load	        KEYWORD2
+startConnection KEYWORD2
+status        KEYWORD2
+RestRequest   KEYWORD2
 
 ###########################################
 # Constants (LITERAL1)
 ###########################################
 
-DYNACONNECT_OK	LITERAL1
-DYNACONNECT_SUCCESS	LITERAL1
-DYNACONNECT_ERROR_PARAM	LITERAL1
-DYNACONNECT_ERROR_FILE	LITERAL1
-DYNACONNECT_ERROR_SSID	LITERAL1
-DYNACONNECT_ERROR_PASS	LITERAL1
-DYNACONNECT_ERROR_CHECK	LITERAL1
-ESP8266UTIL_STORE_EEPROM	LITERAL1
-ESP8266UTIL_STORE_FS	LITERAL1
+STORE_EEPROM	LITERAL1
+STORE_FS	LITERAL1
 

@@ -10,9 +10,9 @@
 // Extendable: Yes
 //
 // @file ESP8266Util.h
-// A simple Library to perform common functions on ESP8266
 // 
 // @brief 
+// A simple Library to perform common functions on ESP8266
 //
 // @version API 1.0.0
 //
@@ -32,39 +32,47 @@
 #include <Print.h>
 #include <ESP8266WiFi.h>
 
-#define DYNACONNECT_OK          0
-#define DYNACONNECT_SUCCESS     0
-#define DYNACONNECT_ERROR_PARAM 1
-#define DYNACONNECT_ERROR_FILE  2
-#define DYNACONNECT_ERROR_SSID  3
-#define DYNACONNECT_ERROR_PASS  4
-#define DYNACONNECT_ERROR_CHECK 5
-
 #ifndef ESP8266
 //------------------------------<<<<
 
 #define ESP8266Util_Store_t
 
-#define ESP8266Util_Conn(P,X,Y,Z)
-#define ESP8266Util_FreeChannel(X)
+#define Connect(P,X,Y,Z)
+#define FreeChannel(X)
+#define AccessPoint(P,Q,R,S)
+#define IsConnected() 0
+#define IsAccessPoint() 0
+#define IsStation() 0
+#define RestRequest(P,Q,R,S,T)
 
 //------------------------------>>>>
 #else /* Happy to Complied in ESP8266 ! */
 //------------------------------<<<<
 
 typedef enum{
-    ESP8266UTIL_STORE_FS=0,
-    ESP8266UTIL_STORE_EEPROM
-}ESP8266Util_Store_t;
+    STORE_FS=0,
+    STORE_EEPROM
+}Store_t;
 
-bool ESP8266Util_Conn(const char *ssid, const char *pass, 
-    bool persistent = false, uint32_t retry = 0);
+bool Connect(const char *ssid, const char *pass, 
+     uint32_t retry = 0, bool persistent = false);
 
-bool ESP8266Util_AP(const char *ssid, const char *pass, IPAddress apip = IPAddress(192, 168, 1, 1));
+bool AccessPoint(const char *ssid, const char *pass, int32_t chan = 7, 
+    IPAddress apip = IPAddress(192, 168, 1, 1));
 
-int32_t ESP8266Util_FreeChannel(uint32_t cycle = 4);
+int32_t FreeChannel(uint32_t cycle = 4, WiFiPhyMode_t mode = WIFI_PHY_MODE_11G);
 
-class ESP8266Weg{
+bool IsConnected(void);
+
+bool IsAccessPoint(void);
+
+bool IsStation(void);
+
+bool RestRequest(String uri, String data, 
+    char *buffer = NULL, uint32_t max_sz=0, int32_t *httpCode = NULL);
+
+/// Wireless Automatic Configuration Class
+class Weg{
   
   private:
   
@@ -75,7 +83,7 @@ class ESP8266Weg{
   char _szHostName[33];
   bool _bAutoWifiNeeded;
   bool _bStoreInfo;
-  ESP8266Util_Store_t _xprefStore;
+  Store_t _xprefStore;
   bool _bAP_infoValid;
   bool _bST_infoValid;
   IPAddress _xAP_ip;
@@ -94,7 +102,7 @@ class ESP8266Weg{
   /// Variable Controlling the Number of Reconnection attempts before going to AP mode
   uint32_t nReconnect;
   /// Constructor for the Class
-  ESP8266Weg(void);
+  Weg(void);
   /// Start the System
   bool begin(void);
   /// Enable / Disable Automatic WiFi AP enablement
@@ -106,17 +114,17 @@ class ESP8266Weg{
   /// Manually Configure a Custom Station Name and Password
   bool stationInfo(const char *ssid, const char *pass);
   /// Change to Storage where the Connection info is stored and if its needed
-  void setStore(bool bStoreInfo = true, ESP8266Util_Store_t xpStore = ESP8266UTIL_STORE_FS);
+  void setStore(bool bStoreInfo = true, Store_t xpStore = STORE_FS);
   /// Perform storage function in case Valid Station Info is available
   bool store(void);
   /// Clear the Info in Storage & Memory
   bool remove(bool bmemory = true);
-  /// Check if there is some Info available in Storage or Already valid info in Memory
-  bool check(void);
-  /// To Begin connection in case everthing is Available Alright
-  bool connect(void);
+  /// Load if there is some Info available in Storage or Already valid info in Memory
+  bool load(void);
+  /// To Begin connection in case everything is Available Alright
+  bool startConnection(void);
   /// To Run the Internal State Machine for connectivity
-  bool run(void);
+  bool status(void);
 };
 
 //------------------------------>>>>
