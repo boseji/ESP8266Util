@@ -30,9 +30,12 @@ setStore	    KEYWORD2
 store	        KEYWORD2
 remove	      KEYWORD2
 load	        KEYWORD2
-startConnection KEYWORD2
+startConnection     KEYWORD2
 status        KEYWORD2
 RestRequest   KEYWORD2
+ThingSpeak_Push     KEYWORD2
+ThingSpeak_Execute  KEYWORD2
+ThingSpeak_Command  KEYWORD2
 
 ###########################################
 # Constants (LITERAL1)
