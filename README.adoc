@@ -2,17 +2,16 @@
 
 == Utility functions for ESP8266 Module & ThingSpeak API ==
 
-This library was developed in the spirit help perform common functions
-while working with ESP8266 module faster.
-Also some of the IoT usecases need cloud access, we like the 
-https://thingspeak.com/ IoT service.
-Hence this library has a set of Basic APIs to talk to the **ThingSpeak Services**.
+This library was developed to speed up common use cases related to ESP8266 module project implementations.
+Leading to bug free, faster development.
 
 
-Hence needs initialization of the *Serial* Library before 
-with `Serial.begin(115200);`. 
+IoT usecases need cloud access, the https://thingspeak.com/ IoT service is free easy to use option.
+This library has a set of basic APIs to talk to the **ThingSpeak Services**.
 
-(Note: In general for ESP8266 115200 BAUD a preferred BAUD rate.)
+
+Debug features in this library need initialization of the *Serial* Library before 
+with `Serial.begin(115200);`. The default debug is targeted on the `UART0` of the ESP8266 module.
 
 
 == Example ==
