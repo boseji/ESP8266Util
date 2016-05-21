@@ -1,12 +1,12 @@
 = ESP8266Util library for ESP8266 Arduino =
 
-== Useful common utility functions for ESP8266 Module & Thingspeak ==
+== Utility functions for ESP8266 Module & ThingSpeak API ==
 
 This library was developed in the spirit help perform common functions
 while working with ESP8266 module faster.
 Also some of the IoT usecases need cloud access, we like the 
-[Thingspeak](http://www.thingspeak.com) IoT service.
-Hence this library has a set of Basic APIs to talk to the *Thingspeak Services*.
+https://thingspeak.com/ IoT service.
+Hence this library has a set of Basic APIs to talk to the **ThingSpeak Services**.
 
 
 Hence needs initialization of the *Serial* Library before 
