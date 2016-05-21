@@ -317,7 +317,7 @@ bool RestRequest(String uri, String data,
       }
       break;
     }
-    
+
     // Check Request Type
     if(data.length() != 0) // POST Request
     {
@@ -353,25 +353,118 @@ bool RestRequest(String uri, String data,
   {
     *httpCode = code;
   }
-  code = http.getString().length();
-  if(buffer != NULL && code != 0)
+  // Copy String
+  if(buffer != NULL)
   {
-    if(max_sz > code)
-      strncpy(buffer,http.getString().c_str(), code);
-    else
-      strncpy(buffer,http.getString().c_str(), max_sz);
-    if(Serial && !NoDebug)
-    {    
-        Serial.println(" HTTP Response: ");
-        Serial.println(http.getString());
-    }
-  }
+    // Flush the Buffer
+    memset((void *)buffer, 0, max_sz);
+    // Only if the Code was success
+    if(code == HTTP_CODE_OK)
+    {
+      String resp = "";
+      resp = http.getString();
+      code = resp.length();
+      // If there is some data sent back
+      if(code > 0)
+      {
+        // Size Constrains
+        if(max_sz > code)
+          strncpy(buffer,resp.c_str(), code);
+        else
+          strncpy(buffer,resp.c_str(), max_sz);
+        if(Serial && !NoDebug)
+        {    
+            Serial.println(" HTTP Response: ");
+            Serial.println(resp);
+        }
+      }// End of Data Size Check
+    }// End of HTTP code check for Response
+  }// End of Buffer available check
   
   // In all cases Close HTTP Client Before leaving
   http.end();
+  
   return ret; // All other Cases ignore
 }
 
+///////////////////////////////////////////////////////////////////////
+
+bool ThingSpeak_Push(const char *key, const char* fieldname, String Value)
+{
+  // Parameter Error
+  if(key == NULL || fieldname == NULL) return false;
+  if(strlen(key)!= 16 || strlen(fieldname) == 0) return false;
+  
+  String data = "api_key=";
+  data+=key;
+  data+='&';
+  data+=fieldname;
+  data+='=';
+  data+=Value;
+  return RestRequest("http://api.thingspeak.com/update/",data);
+}
+///////////////////////////////////////////////////////////////////////
+
+bool ThingSpeak_Push(const char *key, const char* fieldname1, String Value1,
+  const char* fieldname2, String Value2)
+{
+  // Parameter Error
+  if(key == NULL || fieldname1 == NULL || fieldname2 == NULL) return false;
+  if(strlen(key)!= 16 || strlen(fieldname1) == 0 || strlen(fieldname2) == 0) return false;
+  
+  String data = "api_key=";
+  data+=key;
+  data+='&';
+  data+=fieldname1;
+  data+='=';
+  data+=Value1;
+  data+='&';
+  data+=fieldname2;
+  data+='=';
+  data+=Value2;
+  return RestRequest("http://api.thingspeak.com/update/",data);
+}
+
+///////////////////////////////////////////////////////////////////////
+
+bool ThingSpeak_Execute(const char *tb_id, const char *tb_key, 
+  char *cmd_buf, size_t max_sz)
+{
+  // Parameter Error Check
+  if(tb_id == NULL || tb_key == NULL || cmd_buf == NULL || max_sz < 2)
+    return false;
+  if(strlen(tb_key)!= 16 || strlen(tb_id) < 4) return false;
+  
+  String req = "http://api.thingspeak.com/talkbacks/";
+  req += tb_id;
+  req += "/commands/execute";
+  String data = "api_key=";
+  data += tb_key;
+  return RestRequest(req,data,cmd_buf,max_sz);
+}
+///////////////////////////////////////////////////////////////////////
+
+bool ThingSpeak_Command(const char *tb_id, const char *tb_key, 
+  const char *cmd_buf)
+{
+  // Parameter Error Check
+  if(tb_id == NULL || tb_key == NULL || cmd_buf == NULL)
+    return false;
+  if(strlen(tb_key)!= 16 || strlen(tb_id) < 4) return false;
+  
+  String req = "http://api.thingspeak.com/talkbacks/";
+  req += tb_id;
+  req += "/commands";
+  String data = "api_key=";
+  data += tb_key;
+  data += "&command_string=";
+  data += cmd_buf;
+  return RestRequest(req,data);
+  
+}
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////

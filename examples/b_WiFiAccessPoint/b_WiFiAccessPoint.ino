@@ -23,6 +23,9 @@
 #include <ESP8266Util.h>
 #include <ESP8266WebServer.h>
 
+const char *APssid = "Boseji's Network";
+const char *password = "12345";
+
 ESP8266WebServer server(80);
 
 void handle_root();
@@ -37,7 +40,7 @@ void setup() {
   
   Serial.println(" BEGIN");
   // Begin an Access Point with Free Channel Assessment
-  if(AccessPoint("Boseji's Network","Password",FreeChannel()))
+  if(AccessPoint(APssid,password,FreeChannel()))
     Serial.println(" Started Access Point");
   else
   {

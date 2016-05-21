@@ -23,6 +23,9 @@
 #include <ESP8266Util.h>
 #include <ESP8266WebServer.h>
 
+const char *ssid = "..........";
+const char *password = "...........";
+
 ESP8266WebServer server(80);
 
 void handle_root();
@@ -38,7 +41,7 @@ void setup() {
   Serial.println(" BEGIN");
   // Connect to the WiFi network
   //  Perform 50 Retries
-  if(Connect("SSID","Password",50))
+  if(Connect(ssid,password,50))
     Serial.println(" Connected");
   else
   {

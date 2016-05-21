@@ -44,6 +44,7 @@
 #define IsAccessPoint() 0
 #define IsStation() 0
 #define RestRequest(P,Q,R,S,T)
+#define ThingSpeeak_Push(X,Y,Z)
 
 //------------------------------>>>>
 #else /* Happy to Complied in ESP8266 ! */
@@ -70,6 +71,15 @@ bool IsStation(void);
 
 bool RestRequest(String uri, String data, 
     char *buffer = NULL, uint32_t max_sz=0, int32_t *httpCode = NULL);
+
+bool ThingSpeak_Push(const char *key, const char* fieldname, String Value);
+
+bool ThingSpeak_Push(const char *key, const char* fieldname1, String Value1,
+  const char* fieldname2, String Value2);
+
+bool ThingSpeak_Execute(const char *tb_id, const char *tb_key, char *cmd_buf, size_t max_sz);
+
+bool ThingSpeak_Command(const char *tb_id, const char *tb_key, const char *cmd_buf);
 
 /// Wireless Automatic Configuration Class
 class Weg{
