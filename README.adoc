@@ -1,0 +1,63 @@
+= ESP8266Util library for ESP8266 Arduino =
+
+== Useful common utility functions for ESP8266 Module & Thingspeak ==
+
+This library was developed in the spirit help perform common functions
+while working with ESP8266 module faster.
+Also some of the IoT usecases need cloud access, we like the 
+[Thingspeak](http://www.thingspeak.com) IoT service.
+Hence this library has a set of Basic APIs to talk to the *Thingspeak Services*.
+
+
+Hence needs initialization of the *Serial* Library before 
+with `Serial.begin(115200);`. 
+
+(Note: In general for ESP8266 115200 BAUD a preferred BAUD rate.)
+
+
+== Example ==
+
+```arduino
+#include <ESP8266Util.h>
+
+const char *ssid = "..........";
+const char *password = "...........";
+
+void setup() {
+  // Boot-up Wait
+  delay(100);
+  Serial.begin(115200);
+  Serial.println();
+  
+  // WiFi Connection
+  if(Connect(ssid,password,50))
+    Serial.println(" Connected");
+  else
+  {
+    Serial.println(" Error Unable to connect");
+    while(1);
+  }
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+}
+```
+
+
+=== Dependencies ===
+ *Serial* Library
+ Thread Safe: No
+ Extendable: Yes
+
+ 
+===== Note: =====
+**Debug Serial Print can be Disabled** by making 
+`#define NoDebug 1` on *Line 36* of `src/ESP8266Util.cpp`.
+
+
+== License ==
+
+Released Under creative commons license 3.0: Attribution-ShareAlike CC BY-SA
+
